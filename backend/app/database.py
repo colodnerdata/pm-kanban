@@ -11,6 +11,7 @@ def connect_db() -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -70,7 +71,9 @@ def init_db() -> None:
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_boards_user_id ON boards(user_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_columns_board_id ON columns(board_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_columns_board_position ON columns(board_id, position)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cards_column_id ON cards(column_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_cards_column_position ON cards(column_id, position)")
     conn.commit()
     conn.close()
 

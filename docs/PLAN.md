@@ -81,6 +81,10 @@ Tests
 Success criteria
 - Schema proposal is clear, normalized, and approved by the user.
 
+Revisions applied before sign-off
+- Added `PRAGMA foreign_keys = ON` to `connect_db()` so FK constraints are actually enforced at runtime.
+- Added missing compound indexes `idx_columns_board_position` and `idx_cards_column_position` to `init_db()` to align implementation with the JSON schema doc.
+
 ## Part 6: Backend API (persistent Kanban)
 
 Checklist
