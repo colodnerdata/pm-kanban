@@ -2,7 +2,7 @@
 
 This plan is the single source of truth for the MVP. Each part includes a checklist, tests, and success criteria. Target 80% unit test coverage when it is sensible and adds value; prioritize robust integration testing and meaningful unit tests over coverage metrics.
 
-## Part 1: Plan (current)
+## Part 1: Plan
 
 Checklist
 - [x] Review root AGENTS.md and existing documentation.
@@ -16,6 +16,8 @@ Tests
 Success criteria
 - Plan is detailed, actionable, and approved by the user.
 - frontend/AGENTS.md accurately reflects current frontend architecture.
+
+---
 
 ## Part 2: Scaffolding (Docker + FastAPI + scripts)
 
@@ -33,8 +35,10 @@ Tests
 
 Success criteria
 - Container starts with a single command and serves both HTML at / and JSON at the API endpoint.
-- Start/stop scripts work on Mac, PC, and Linux (PC/Linux not verified; user approved skip).
-- Unit coverage for backend modules at or above 80% (verified at 98%).
+- Start/stop scripts work on Mac, PC, and Linux.
+- Unit coverage for backend modules at or above 80%.
+
+---
 
 ## Part 3: Add in Frontend (static build served by backend)
 
@@ -50,6 +54,8 @@ Tests
 Success criteria
 - The app loads the existing Kanban demo at / via the backend.
 - All unit and integration tests pass; coverage targets are applied where sensible.
+
+---
 
 ## Part 4: Fake user sign-in experience
 
@@ -67,6 +73,8 @@ Success criteria
 - Unauthenticated users see login screen; authenticated users see Kanban.
 - Login and logout flows function reliably with tests covering the flow.
 
+---
+
 ## Part 5: Database modeling
 
 Checklist
@@ -82,8 +90,10 @@ Success criteria
 - Schema proposal is clear, normalized, and approved by the user.
 
 Revisions applied before sign-off
-- Added `PRAGMA foreign_keys = ON` to `connect_db()` so FK constraints are actually enforced at runtime.
+- Added `PRAGMA foreign_keys = ON` to `connect_db()` so FK constraints are enforced at runtime.
 - Added missing compound indexes `idx_columns_board_position` and `idx_cards_column_position` to `init_db()` to align implementation with the JSON schema doc.
+
+---
 
 ## Part 6: Backend API (persistent Kanban)
 
@@ -100,6 +110,8 @@ Tests
 Success criteria
 - API persists data to SQLite and passes all tests.
 - Coverage targets are applied where sensible for backend units.
+
+---
 
 ## Part 7: Frontend + Backend integration
 
@@ -118,71 +130,44 @@ Success criteria
 - Kanban data persists across reloads using the backend.
 - Full flow passes integration tests reliably.
 
-Design decisions (Part 7)
+Design decisions
 - Frontend prefixes backend numeric ids for drag-and-drop stability and strips them before API calls.
 - Drag-and-drop uses card/column metadata to resolve drop targets across columns.
 - Playwright runs against the backend-served static build to reflect production behavior.
 
-## Part 8: AI connectivity (OpenRouter)
+---
 
-Checklist
-- [x] Add backend client that calls OpenRouter with model openai/gpt-oss-120b.
-- [x] Read OPENROUTER_API_KEY from .env.
-- [x] Implement a simple /api/chat endpoint to verify AI connectivity.
-- [x] Hardcode OpenRouter base URL for now.
+## Testing reference
 
-Notes (Part 8 decisions)
-- Use /api/chat for the connectivity endpoint.
-- Run a live call to OpenRouter for testing (no mocking).
-- Keep the OpenRouter base URL hardcoded.
+### Running the full test suite
 
-Tests
-- [x] Unit test that returns 500 when OPENROUTER_API_KEY is missing.
-- [x] Integration test that validates the "2+2" response path via live OpenRouter (skipped if env is missing).
+Start the container in detached mode first:
+```bash
+./scripts/start-mac.sh
+```
 
-Success criteria
-- OpenRouter connectivity verified with a live response and guarded with tests.
+Backend unit tests (inside container, requires Python 3.12):
+```bash
+docker exec pm-app python -m pytest backend/tests/test_main.py backend/tests/test_board_api.py -v
+```
 
-Testing notes (added after Part 8)
-- For live integration/E2E tests, start the container in detached mode so the terminal can run tests:
-	- docker build -t pm-app .
-	- docker rm -f pm-app || true
-	- docker run -d --name pm-app --env-file .env -p 8000:8000 pm-app
-- Wait for readiness via /health before tests:
-	- curl -sf http://127.0.0.1:8000/health
-- Backend tests require repo root on PYTHONPATH:
-	- PM_BASE_URL=http://127.0.0.1:8000 PYTHONPATH=/absolute/path/to/repo pytest backend
-- Frontend tests:
-	- npm run test:all (runs unit + Playwright). Playwright uses the backend-served app at 8000.
-- Stop the container when done:
-	- ./scripts/stop-mac.sh (or platform equivalent)
+Live integration tests (against the running container):
+```bash
+docker exec -e PM_BASE_URL=http://localhost:8000 pm-app \
+  python -m pytest backend/tests/test_integration.py -v
+```
 
-## Part 9: AI structured outputs for Kanban updates
+Frontend unit tests (local, Node required):
+```bash
+cd frontend && npm run test:unit
+```
 
-Checklist
-- [x] Define Structured Output schema for chat responses and optional board updates.
-- [x] Send current Kanban JSON + conversation history to the model.
-- [x] Apply model updates to persisted board data.
+Stop when done:
+```bash
+./scripts/stop-mac.sh
+```
 
-Tests
-- [x] Unit tests for schema validation and update application.
-- [x] Integration tests for end-to-end AI update flow (mocked).
-
-Success criteria
-- Structured outputs reliably update the Kanban without errors.
-- Tests demonstrate correct parsing and persistence.
-
-## Part 10: AI chat sidebar UI
-
-Checklist
-- [x] Build sidebar chat UI aligned to the color scheme.
-- [x] Display conversation history and AI responses.
-- [x] Apply AI-driven Kanban updates and refresh the UI.
-
-Tests
-- [x] Unit tests for chat UI components (coverage targets where sensible).
-- [x] Integration tests for chat flow including AI-triggered Kanban updates (mocked).
-
-Success criteria
-- Sidebar chat is responsive, clear, and stable.
-- AI-driven Kanban updates reflect immediately in the UI.
+### Notes
+- Backend tests use `PM_DB_PATH` env var with `tmp_path` fixture for isolated per-test databases.
+- Integration tests are skipped automatically when `PM_BASE_URL` is not set.
+- The `.env` file at the project root is optional for Parts 1-7 (no AI key needed). Required for AI features.

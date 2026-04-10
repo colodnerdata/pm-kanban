@@ -1,54 +1,62 @@
 # Frontend overview
 
 ## Stack
-- Next.js 16 App Router
-- React 19
-- TypeScript
+- Next.js 16 App Router with static export (`output: "export"`)
+- React 19, TypeScript
 - Tailwind CSS v4 (via @tailwindcss/postcss)
-- Drag-and-drop via @dnd-kit
-- Unit testing with Vitest and Testing Library
-- E2E testing with Playwright
+- Drag-and-drop via @dnd-kit/core and @dnd-kit/sortable
+- Unit tests: Vitest + @testing-library/react
+- E2E tests: Playwright (runs against the backend-served app at port 8000)
 
 ## Entry points
-- App shell: src/app/layout.tsx
-- Home route: src/app/page.tsx (renders the Kanban board)
-- Global styles: src/app/globals.css
+- App shell: `src/app/layout.tsx` — fonts, global styles
+- Home route: `src/app/page.tsx` — owns auth state, board state, and chat state
+- Global styles and CSS variables: `src/app/globals.css`
+
+## Auth flow
+Credentials are validated client-side in `page.tsx` against hardcoded values (`user` / `password`). No server session is used. The username is passed to every API call so the backend can scope data correctly.
 
 ## UI components
-- KanbanBoard: src/components/KanbanBoard.tsx
-  - Owns board state (initialData from lib/kanban)
-  - Handles drag-and-drop, column rename, add/delete cards
-  - Uses DndContext + DragOverlay
-- KanbanColumn: src/components/KanbanColumn.tsx
-  - Droppable column surface
-  - Renders column header, cards list, and NewCardForm
-- KanbanCard: src/components/KanbanCard.tsx
-  - Sortable card
-  - Displays title/details and a remove button
-- KanbanCardPreview: src/components/KanbanCardPreview.tsx
-  - Visual preview used in drag overlay
-- NewCardForm: src/components/NewCardForm.tsx
-  - Inline form to add cards (title required, details optional)
+- `KanbanBoard` (`src/components/KanbanBoard.tsx`)
+  - Receives `board` and `onBoardChange` props — state is owned by `page.tsx`
+  - Handles drag-and-drop via DndContext + DragOverlay
+  - Calls `onRenameColumn`, `onAddCard`, `onDeleteCard`, `onMoveCard` callbacks
+  - Renders an optional `sidebar` slot (used for ChatSidebar)
+- `KanbanColumn` (`src/components/KanbanColumn.tsx`) — droppable column surface
+- `KanbanCard` (`src/components/KanbanCard.tsx`) — sortable card with remove button
+- `KanbanCardPreview` (`src/components/KanbanCardPreview.tsx`) — drag overlay preview
+- `NewCardForm` (`src/components/NewCardForm.tsx`) — inline add-card form
+- `ChatSidebar` (`src/components/ChatSidebar.tsx`) — AI chat panel rendered inside KanbanBoard sidebar slot
 
-## Data model and utilities
-- Kanban data types and helpers: src/lib/kanban.ts
-  - Types: Card, Column, BoardData
-  - initialData: demo board content
-  - moveCard: reorders/moves cards across columns
-  - createId: generates random IDs for cards
+## Data model and utilities (`src/lib/`)
+- `kanban.ts` — types (`Card`, `Column`, `BoardData`), `moveCard`, `findCardLocation`, `toColumnId`, `toCardId`, `fromColumnId`, `fromCardId`
+- `api.ts` — all fetch functions: `fetchBoard`, `createCard`, `updateCard`, `deleteCard`, `updateColumn`, `sendChat`, `toBoardData`
+
+## ID prefixing convention
+Backend uses integer primary keys. The frontend prefixes them before use in drag-and-drop:
+- Columns: `col-{id}` via `toColumnId(id)`
+- Cards: `card-{id}` via `toCardId(id)`
+
+Prefix is stripped before every API call with `fromColumnId(id)` / `fromCardId(id)`. This prevents @dnd-kit from confusing IDs across entity types.
 
 ## Tests
-- Unit tests
-  - src/components/KanbanBoard.test.tsx
-  - src/lib/kanban.test.ts
-- Test setup: src/test/setup.ts
-- E2E tests: tests/kanban.spec.ts
+- `src/app/page.test.tsx` — login form and auth state
+- `src/components/KanbanBoard.test.tsx` — board rendering and interactions
+- `src/components/ChatSidebar.test.tsx` — chat UI
+- `src/components/KanbanCardPreview.test.tsx` — drag preview
+- `src/lib/kanban.test.ts` — moveCard logic and utilities
+- E2E: `tests/kanban.spec.ts` (Playwright, targets port 8000)
 
 ## Build and scripts
-- Scripts: package.json
-  - dev, build, start, lint
-  - test:unit, test:e2e, test:all
+```bash
+npm run dev           # Dev server (localhost:3000, no backend)
+npm run build         # Static export → frontend/out/
+npm run test:unit     # Vitest unit tests
+npm run test:e2e      # Playwright (requires app running at port 8000)
+npm run test:all      # Unit + E2E
+```
 
 ## Notes
-- The current frontend is a standalone demo that uses in-memory state only.
-- Styling uses CSS variables defined in globals.css to match the shared color scheme.
+- The built `frontend/out/` directory is copied into the Docker image and served by FastAPI.
+- `next.config.ts` sets `output: "export"`, `trailingSlash: true`, `images: { unoptimized: true }`.
+- Do not add server-side Next.js features (API routes, server components with data fetching) — the build must remain a pure static export.
