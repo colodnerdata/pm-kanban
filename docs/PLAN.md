@@ -11,10 +11,10 @@ Goals
 - Get explicit user approval before coding
 
 Checklist
-- [ ] Review current frontend source and test coverage
-- [ ] Create `frontend/AGENTS.md` with component descriptions, data model, and build/test commands
-- [ ] Confirm no backend or Docker scaffolding exists yet
-- [ ] Write this detailed plan with substeps and success criteria
+- [x] Review current frontend source and test coverage
+- [x] Create `frontend/AGENTS.md` with component descriptions, data model, and build/test commands
+- [x] Confirm no backend implementation or Docker setup exists yet (a `backend/` directory exists as a placeholder with only `AGENTS.md`)
+- [x] Write this detailed plan with substeps and success criteria
 - [ ] Present the plan for user approval
 
 Tests
