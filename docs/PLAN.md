@@ -37,6 +37,7 @@ Checklist
 - [ ] Add `Dockerfile` at repo root or appropriate location
 - [ ] Ensure Docker build produces a working image
 - [ ] Add `scripts/start.sh` and `scripts/stop.sh` for Linux/macOS
+- [ ] Add `scripts/start.bat` and `scripts/stop.bat` for Windows/PC
 - [ ] Add a simple `/api/hello` endpoint or equivalent
 - [ ] Serve a static HTML file or Next.js built frontend at `/`
 
@@ -47,7 +48,7 @@ Tests
 
 Success criteria
 - Local container can start and serve a test page plus one backend API endpoint
-- Start/stop scripts work consistently on Linux/macOS
+- Start/stop scripts work consistently on Linux/macOS and Windows/PC
 
 ## Part 3: Add in Frontend
 
