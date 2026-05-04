@@ -1,0 +1,41 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from . import auth, models, schemas
+from .db import get_db, init_db
+
+router = APIRouter()
+
+@router.post("/auth/register", response_model=schemas.TokenResponse)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Check if user exists
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # Create new user
+    hashed_password = auth.get_password_hash(user.password)
+    new_user = models.User(username=user.username, hashed_password=hashed_password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # Create token
+    access_token = auth.create_access_token(data={"sub": new_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/auth/login", response_model=schemas.TokenResponse)
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if not db_user or not auth.verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    
+    access_token = auth.create_access_token(data={"sub": db_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/projects/", response_model=schemas.ProjectResponse)
+def create_project(project: schemas.ProjectCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_project = models.Project(name=project.name, owner_id=current_user.id)
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return db_project
